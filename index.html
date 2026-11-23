@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Óptica Caribbe - Portal de Ventas</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+  </style>
+</head>
+<body class="text-slate-800">
+
+  <!-- BARRA SUPERIOR -->
+  <nav class="bg-slate-900 text-white shadow-md">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+      <div class="flex items-center gap-2.5">
+        <span class="bg-emerald-500 text-slate-950 font-bold px-2.5 py-1 rounded text-sm">CARIBBE</span>
+        <h1 class="font-semibold text-lg tracking-tight">Óptica Caribbe - Portal de Ventas</h1>
+      </div>
+      <div id="navActions">
+        <button onclick="openAdminModal()" class="text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-2 rounded-lg transition">
+          Acceso Admin
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- VISTA 1: ACCESO CAPTADORES (PANTALLA INICIAL PÚBLICA) -->
+  <main id="captadorLoginView" class="max-w-md mx-auto mt-16 px-4">
+    <div class="bg-white rounded-2xl shadow-lg p-8 border border-slate-100">
+      <h2 class="text-2xl font-bold text-center text-slate-900 mb-2">Consulta tus Ventas y Comisiones</h2>
+      <p class="text-sm text-slate-500 text-center mb-6">Ingresa tu código PIN personal para ver tu resumen de ventas y comisiones acumuladas.</p>
+      
+      <form onsubmit="loginCaptador(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Código PIN</label>
+          <input type="password" id="pinInput" maxlength="8" required placeholder="••••"
+            class="w-full text-center text-2xl tracking-widest font-bold border border-slate-300 rounded-xl py-3 focus:ring-2 focus:ring-emerald-500 focus:outline-none" />
+        </div>
+        <p id="pinError" class="text-red-600 text-xs text-center hidden">PIN incorrecto o no registrado.</p>
+        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 rounded-xl transition shadow">
+          Ver mis ventas
+        </button>
+      </form>
+    </div>
+  </main>
+
+  <!-- VISTA 2: PANEL DEL CAPTADOR (SOLO LECTURA) -->
+  <section id="captadorDashboardView" class="max-w-7xl mx-auto px-4 py-8 hidden">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+      <div>
+        <span class="text-xs uppercase font-bold text-emerald-600">Portal Captador (Solo Lectura)</span>
+        <h2 class="text-2xl font-bold text-slate-900">Hola, <span id="capNameDisplay"></span></h2>
+      </div>
+      <div class="flex items-center gap-3">
+        <input type="month" id="capMonthFilter" onchange="renderCaptadorData()" class="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white" />
+        <button onclick="logoutCaptador()" class="text-sm bg-slate-200 hover:bg-slate-300 px-3 py-2 rounded-lg font-medium">Salir</button>
+      </div>
+    </div>
+
+    <!-- 4 Tarjetas de Resumen Captador -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+        <p class="text-xs font-semibold text-indigo-600 uppercase">Ventas Lentes Ópticos</p>
+        <p id="capOpticoSalesTotal" class="text-3xl font-bold text-slate-900 mt-1">$0</p>
+        <p class="text-xs text-slate-400 mt-1">Acumulado total (incluye con abono)</p>
+      </div>
+      <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+        <p class="text-xs font-semibold text-cyan-600 uppercase">Ventas Lentes de Contacto (Aparte)</p>
+        <p id="capContactoSalesTotal" class="text-3xl font-bold text-slate-900 mt-1">$0</p>
+        <p class="text-xs text-slate-400 mt-1">Acumulado independiente</p>
+      </div>
+      <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+        <p class="text-xs font-semibold text-amber-600 uppercase">Comisión Pendiente de Pago</p>
+        <p id="capPendingTotal" class="text-3xl font-bold text-amber-600 mt-1">$0</p>
+        <p class="text-xs text-slate-400 mt-1">Ventas 100% pagadas por cliente</p>
+      </div>
+      <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+        <p class="text-xs font-semibold text-emerald-600 uppercase">Comisión Ya Pagada</p>
+        <p id="capPaidTotal" class="text-3xl font-bold text-emerald-600 mt-1">$0</p>
+        <p class="text-xs text-slate-400 mt-1">Liquidaciones entregadas</p>
+      </div>
+    </div>
+
+    <!-- Tabla de Ventas del Captador -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-slate-50 border-b border-slate-200 text-xs uppercase text-slate-500">
+              <th class="py-3 px-4">Fecha</th>
+              <th class="py-3 px-4">Cliente</th>
+              <th class="py-3 px-4">Categoría / Pago</th>
+              <th class="py-3 px-4">Tipo Cristal</th>
+              <th class="py-3 px-4">Total Venta</th>
+              <th class="py-3 px-4">Desc. Cristal</th>
+              <th class="py-3 px-4">Tu Comisión</th>
+              <th class="py-3 px-4">Estado Comisión</th>
+            </tr>
+          </thead>
+          <tbody id="capSalesTable" class="divide-y divide-slate-100 text-sm"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- VISTA 3: PANEL ADMINISTRADOR (SOLO LOS 3 USUARIOS AUTORIZADOS) -->
+  <section id="adminDashboardView" class="max-w-7xl mx-auto px-4 py-8 hidden">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+      <div>
+        <span class="text-xs uppercase font-bold text-indigo-600">Panel de Administración</span>
+        <h2 class="text-2xl font-bold text-slate-900">Gestión de Ventas, Cristales y Comisiones</h2>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="openCaptadoresModal()" class="bg-slate-800 hover:bg-slate-700 text-white text-sm px-4 py-2 rounded-lg font-medium">
+          + Gestionar Captadores / PIN
+        </button>
+        <button onclick="adminLogout()" class="bg-red-100 hover:bg-red-200 text-red-700 text-sm px-4 py-2 rounded-lg font-medium">
+          Cerrar Sesión
+        </button>
+      </div>
+    </div>
+
+    <!-- Formulario Registrar Venta -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-8">
+      <h3 class="font-bold text-lg text-slate-800 mb-4" id="formTitle">Registrar Nueva Venta</h3>
+      <form onsubmit="saveSale(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <input type="hidden" id="editSaleId" />
+        
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Fecha *</label>
+          <input type="date" id="saleDate" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Captador *</label>
+          <select id="saleCaptador" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white"></select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Cliente (Opcional)</label>
+          <input type="text" id="saleClient" placeholder="Ej. María Rojas" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Categoría *</label>
+          <select id="saleCategory" onchange="updateLivePreview()" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white">
+            <option value="optico">Lentes Ópticos (35% / 40%)</option>
+            <option value="contacto">Lentes de Contacto (20% / 25%)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Medio de Pago *</label>
+          <select id="salePayment" onchange="updateLivePreview()" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white">
+            <option value="efectivo">Efectivo</option>
+            <option value="debito">Débito</option>
+            <option value="credito">Tarjeta de Crédito</option>
+            <option value="transferencia">Transferencia</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Tipo de Cristal</label>
+          <select id="saleCristalType" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white">
+            <option value="N/A">Sin Cristal / No Aplica</option>
+            <option value="Monofocal">Monofocal</option>
+            <option value="Bifocal">Bifocal</option>
+            <option value="Multifocal / Progresivo">Multifocal / Progresivo</option>
+            <option value="Antirreflejo">Antirreflejo</option>
+            <option value="Filtro Azul (Blue Cut)">Filtro Azul (Blue Cut)</option>
+            <option value="Fotocromático (Transitions)">Fotocromático (Transitions)</option>
+            <option value="Alto Índice / Adelgazado">Alto Índice / Adelgazado</option>
+            <option value="Polarizado / Sol c/Receta">Polarizado / Sol c/Receta</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Costo Cristal a Descontar (CLP)</label>
+          <input type="number" id="saleCristal" min="0" value="0" oninput="updateLivePreview()" placeholder="0" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Monto Total Venta (CLP) *</label>
+          <input type="number" id="saleTotal" min="0" required oninput="syncAbonoAndPreview()" placeholder="100000" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+        </div>
+
+        <div class="lg:col-span-2">
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Monto Abonado por Cliente (CLP) *</label>
+          <input type="number" id="saleAbono" min="0" required oninput="updateLivePreview()" placeholder="100000" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+          <span class="text-[11px] text-slate-400">Si pagó todo, deja el mismo monto total.</span>
+        </div>
+
+        <!-- Previsualización en tiempo real -->
+        <div class="sm:col-span-2 lg:col-span-5 bg-slate-50 border border-slate-200 rounded-lg p-3 flex flex-wrap justify-between items-center gap-4">
+          <div class="text-sm">
+            <span class="text-slate-500">Cálculo automático de comisión:</span>
+            <strong id="liveCalcText" class="ml-2 text-slate-900">$0</strong>
+          </div>
+          <div class="flex gap-2">
+            <button type="button" id="cancelEditBtn" onclick="resetSaleForm()" class="hidden px-4 py-2 text-sm bg-slate-200 rounded-lg">Cancelar edición</button>
+            <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 py-2 rounded-lg text-sm shadow">
+              Guardar Venta
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- Tarjetas de Resumen Admin (Según filtros activos) -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+        <p class="text-xs font-semibold text-indigo-600 uppercase">Ventas Lentes Ópticos</p>
+        <p id="adminOpticoTotal" class="text-2xl font-bold text-slate-900 mt-1">$0</p>
+      </div>
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+        <p class="text-xs font-semibold text-cyan-600 uppercase">Ventas Lentes Contacto (Aparte)</p>
+        <p id="adminContactoTotal" class="text-2xl font-bold text-slate-900 mt-1">$0</p>
+      </div>
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+        <p class="text-xs font-semibold text-amber-600 uppercase">Comisiones Pendientes</p>
+        <p id="adminPendingCommSum" class="text-2xl font-bold text-amber-600 mt-1">$0</p>
+      </div>
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+        <p class="text-xs font-semibold text-emerald-600 uppercase">Comisiones Ya Pagadas</p>
+        <p id="adminPaidCommSum" class="text-2xl font-bold text-emerald-600 mt-1">$0</p>
+      </div>
+    </div>
+
+    <!-- Filtros Admin -->
+    <div class="flex flex-wrap gap-3 mb-4 items-center justify-between">
+      <div class="flex flex-wrap gap-2">
+        <select id="adminFilterCaptador" onchange="renderAdminTable()" class="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white">
+          <option value="ALL">Todos los captadores</option>
+        </select>
+        <input type="month" id="adminFilterMonth" onchange="renderAdminTable()" class="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white" />
+        <select id="adminFilterStatus" onchange="renderAdminTable()" class="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white">
+          <option value="ALL">Todos los estados</option>
+          <option value="PENDIENTE">Comisión Pendiente</option>
+          <option value="PAGADA">Comisión Pagada</option>
+          <option value="ABONO">Cliente con Abono (Sin liberar)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Tabla General Admin -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-slate-50 border-b border-slate-200 text-xs uppercase text-slate-500">
+              <th class="py-3 px-4">Fecha</th>
+              <th class="py-3 px-4">Captador</th>
+              <th class="py-3 px-4">Cliente</th>
+              <th class="py-3 px-4">Categoría / Pago</th>
+              <th class="py-3 px-4">Tipo Cristal</th>
+              <th class="py-3 px-4">Desc. Cristal</th>
+              <th class="py-3 px-4">Total / Abono</th>
+              <th class="py-3 px-4">Comisión</th>
+              <th class="py-3 px-4">Pago al Captador</th>
+              <th class="py-3 px-4 text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="adminSalesTable" class="divide-y divide-slate-100 text-sm"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- MODAL LOGIN ADMIN -->
+  <div id="adminLoginModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl">
+      <h3 class="text-lg font-bold mb-1">Acceso Administradores</h3>
+      <p class="text-xs text-slate-500 mb-4">Solo personal autorizado (3 cuentas).</p>
+      <form onsubmit="adminLogin(event)" class="space-y-3">
+        <input type="email" id="adminEmail" required placeholder="Correo electrónico" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+        <input type="password" id="adminPassword" required placeholder="Contraseña" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+        <p id="adminLoginError" class="text-red-600 text-xs hidden">Credenciales inválidas.</p>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeAdminModal()" class="px-4 py-2 text-sm text-slate-600">Cancelar</button>
+          <button type="submit" class="bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium">Entrar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL GESTIONAR CAPTADORES -->
+  <div id="captadoresModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl">
+      <h3 class="text-lg font-bold mb-1">Captadores y Claves PIN</h3>
+      <p class="text-xs text-slate-500 mb-4">Asigna un PIN único a cada captador para que vea solo sus ventas.</p>
+      
+      <form onsubmit="addCaptador(event)" class="flex gap-2 mb-4">
+        <input type="text" id="newCapName" required placeholder="Nombre captador" class="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+        <input type="text" id="newCapPin" required maxlength="8" placeholder="PIN (ej. 1234)" class="w-28 border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+        <button type="submit" class="bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm font-semibold">Agregar</button>
+      </form>
+
+      <div id="captadoresList" class="divide-y divide-slate-100 max-h-60 overflow-y-auto border border-slate-200 rounded-lg mb-4"></div>
+
+      <div class="flex justify-end">
+        <button onclick="closeCaptadoresModal()" class="bg-slate-200 px-4 py-2 rounded-lg text-sm font-medium">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FIREBASE SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    // =========================================================================
+    // PEGA AQUÍ TU CONFIGURACIÓN DE FIREBASE
+    // =========================================================================
+    const firebaseConfig = {
+      apiKey: "TU_API_KEY",
+      authDomain: "TU_PROYECTO.firebaseapp.com",
+      projectId: "TU_PROYECTO",
+      storageBucket: "TU_PROYECTO.appspot.com",
+      messagingSenderId: "TU_SENDER_ID",
+      appId: "TU_APP_ID"
+    };
+    // =========================================================================
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let captadores = [];
+    let sales = [];
+    let currentCaptador = null;
+    let manualAbonoEdited = false;
+
+    const formatCLP = (num) => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(num || 0);
+
+    function calculateCommission(sale) {
+      const total = Number(sale.total) || 0;
+      const abono = Number(sale.abono) || 0;
+      const cristal = Number(sale.cristal) || 0;
+
+      if (abono < total) {
+        return { isPaidFull: false, rate: 0, netBase: Math.max(0, total - cristal), commission: 0 };
+      }
+
+      let rate = 0;
+      if (sale.category === 'optico') {
+        rate = sale.payment === 'efectivo' ? 0.40 : 0.35;
+      } else {
+        rate = sale.payment === 'efectivo' ? 0.25 : 0.20;
+      }
+
+      const netBase = Math.max(0, total - cristal);
+      const commission = Math.round(netBase * rate);
+      return { isPaidFull: true, rate, netBase, commission };
+    }
+
+    onSnapshot(collection(db, "captadores"), (snapshot) => {
+      captadores = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      updateCaptadoresUI();
+      if (currentCaptador) renderCaptadorData();
+      renderAdminTable();
+    });
+
+    onSnapshot(query(collection(db, "ventas"), orderBy("date", "desc")), (snapshot) => {
+      sales = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      if (currentCaptador) renderCaptadorData();
+      renderAdminTable();
+    });
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        document.getElementById('captadorLoginView').classList.add('hidden');
+        document.getElementById('captadorDashboardView').classList.add('hidden');
+        document.getElementById('adminDashboardView').classList.remove('hidden');
+        document.getElementById('navActions').innerHTML = `<span class="text-xs text-emerald-400 mr-2">${user.email}</span>`;
+        if (!document.getElementById('saleDate').value) {
+          document.getElementById('saleDate').valueAsDate = new Date();
+        }
+      } else {
+        document.getElementById('adminDashboardView').classList.add('hidden');
+        document.getElementById('navActions').innerHTML = `
+          <button onclick="openAdminModal()" class="text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-2 rounded-lg transition">
+            Acceso Admin
+          </button>`;
+        if (!currentCaptador) {
+          document.getElementById('captadorLoginView').classList.remove('hidden');
+        }
+      }
+    });
+
+    window.openAdminModal = () => {
+      document.getElementById('adminLoginModal').classList.remove('hidden');
+      document.getElementById('adminLoginModal').classList.add('flex');
+    };
+    window.closeAdminModal = () => {
+      document.getElementById('adminLoginModal').classList.add('hidden');
+      document.getElementById('adminLoginModal').classList.remove('flex');
+    };
+
+    window.adminLogin = async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('adminEmail').value;
+      const pass = document.getElementById('adminPassword').value;
+      try {
+        await signInWithEmailAndPassword(auth, email, pass);
+        document.getElementById('adminLoginError').classList.add('hidden');
+        closeAdminModal();
+      } catch (err) {
+        document.getElementById('adminLoginError').classList.remove('hidden');
+      }
+    };
+
+    window.adminLogout = () => signOut(auth);
+
+    window.loginCaptador = (e) => {
+      e.preventDefault();
+      const pin = document.getElementById('pinInput').value.trim();
+      const found = captadores.find(c => c.pin === pin);
+      if (!found) {
+        document.getElementById('pinError').classList.remove('hidden');
+        return;
+      }
+      document.getElementById('pinError').classList.add('hidden');
+      currentCaptador = found;
+      document.getElementById('pinInput').value = '';
+      document.getElementById('captadorLoginView').classList.add('hidden');
+      document.getElementById('captadorDashboardView').classList.remove('hidden');
+      document.getElementById('capNameDisplay').textContent = found.name;
+      renderCaptadorData();
+    };
+
+    window.logoutCaptador = () => {
+      currentCaptador = null;
+      document.getElementById('captadorDashboardView').classList.add('hidden');
+      document.getElementById('captadorLoginView').classList.remove('hidden');
+    };
+
+    // Renderizar datos privados del Captador
+    window.renderCaptadorData = () => {
+      if (!currentCaptador) return;
+      const monthFilter = document.getElementById('capMonthFilter').value;
+      let mySales = sales.filter(s => s.captadorId === currentCaptador.id);
+      if (monthFilter) {
+        mySales = mySales.filter(s => s.date.startsWith(monthFilter));
+      }
+
+      let opticoSalesSum = 0;
+      let contactoSalesSum = 0;
+      let pendingSum = 0;
+      let paidSum = 0;
+
+      const tbody = document.getElementById('capSalesTable');
+      tbody.innerHTML = '';
+
+      mySales.forEach(s => {
+        const calc = calculateCommission(s);
+        const totalVenta = Number(s.total) || 0;
+
+        // Acumulado de ventas separado (incluye tanto pagadas como con abono)
+        if (s.category === 'optico') {
+          opticoSalesSum += totalVenta;
+        } else {
+          contactoSalesSum += totalVenta;
+        }
+
+        if (calc.isPaidFull) {
+          if (s.commissionStatus === 'PAGADA') {
+            paidSum += calc.commission;
+          } else {
+            pendingSum += calc.commission;
+          }
+        }
+
+        const catLabel = s.category === 'optico' ? 'Lentes Ópticos' : 'Lentes de Contacto';
+        const payLabel = s.payment.charAt(0).toUpperCase() + s.payment.slice(1);
+
+        let statusBadge = '';
+        if (!calc.isPaidFull) {
+          statusBadge = `<span class="bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full text-xs font-medium">Abono (${formatCLP(s.abono)} / ${formatCLP(s.total)})</span>`;
+        } else if (s.commissionStatus === 'PAGADA') {
+          statusBadge = `<span class="bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full text-xs font-semibold">Pagada ✓</span>`;
+        } else {
+          statusBadge = `<span class="bg-amber-100 text-amber-800 px-2.5 py-1 rounded-full text-xs font-semibold">Pendiente de pago</span>`;
+        }
+
+        tbody.innerHTML += `
+          <tr class="hover:bg-slate-50">
+            <td class="py-3 px-4 font-medium whitespace-nowrap">${s.date}</td>
+            <td class="py-3 px-4 text-slate-600">${s.client || '-'}</td>
+            <td class="py-3 px-4">${catLabel} <span class="text-xs text-slate-400">(${payLabel})</span></td>
+            <td class="py-3 px-4 text-slate-600">${s.cristalType || 'N/A'}</td>
+            <td class="py-3 px-4 font-medium">${formatCLP(s.total)}</td>
+            <td class="py-3 px-4 text-slate-500">${s.cristal > 0 ? '-' + formatCLP(s.cristal) : '$0'}</td>
+            <td class="py-3 px-4 font-bold ${calc.isPaidFull ? 'text-slate-900' : 'text-slate-400'}">
+              ${calc.isPaidFull ? formatCLP(calc.commission) + ` <span class="text-xs font-normal text-slate-400">(${calc.rate * 100}%)</span>` : '$0 (En espera)'}
+            </td>
+            <td class="py-3 px-4">${statusBadge}</td>
+          </tr>
+        `;
+      });
+
+      document.getElementById('capOpticoSalesTotal').textContent = formatCLP(opticoSalesSum);
+      document.getElementById('capContactoSalesTotal').textContent = formatCLP(contactoSalesSum);
+      document.getElementById('capPendingTotal').textContent = formatCLP(pendingSum);
+      document.getElementById('capPaidTotal').textContent = formatCLP(paidSum);
+    };
+
+    window.openCaptadoresModal = () => {
+      document.getElementById('captadoresModal').classList.remove('hidden');
+      document.getElementById('captadoresModal').classList.add('flex');
+    };
+    window.closeCaptadoresModal = () => {
+      document.getElementById('captadoresModal').classList.add('hidden');
+      document.getElementById('captadoresModal').classList.remove('flex');
+    };
+
+    window.addCaptador = async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('newCapName').value.trim();
+      const pin = document.getElementById('newCapPin').value.trim();
+      if (captadores.some(c => c.pin === pin)) {
+        alert("Ese PIN ya está en uso por otro captador. Elige otro.");
+        return;
+      }
+      await addDoc(collection(db, "captadores"), { name, pin });
+      document.getElementById('newCapName').value = '';
+      document.getElementById('newCapPin').value = '';
+    };
+
+    window.deleteCaptador = async (id) => {
+      if (confirm("¿Seguro que deseas eliminar este captador?")) {
+        await deleteDoc(doc(db, "captadores", id));
+      }
+    };
+
+    function updateCaptadoresUI() {
+      const select = document.getElementById('saleCaptador');
+      const filter = document.getElementById('adminFilterCaptador');
+      const list = document.getElementById('captadoresList');
+
+      const currentSelect = select.value;
+      const currentFilter = filter.value;
+
+      select.innerHTML = '<option value="">Selecciona captador...</option>';
+      filter.innerHTML = '<option value="ALL">Todos los captadores</option>';
+      list.innerHTML = '';
+
+      captadores.forEach(c => {
+        select.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+        filter.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+        list.innerHTML += `
+          <div class="flex justify-between items-center px-3 py-2 text-sm">
+            <div>
+              <span class="font-semibold">${c.name}</span>
+              <span class="ml-2 text-xs bg-slate-100 px-2 py-0.5 rounded font-mono">PIN: ${c.pin}</span>
+            </div>
+            <button onclick="deleteCaptador('${c.id}')" class="text-red-500 hover:text-red-700 text-xs">Eliminar</button>
+          </div>
+        `;
+      });
+
+      select.value = currentSelect;
+      filter.value = currentFilter || 'ALL';
+    }
+
+    window.syncAbonoAndPreview = () => {
+      const total = document.getElementById('saleTotal').value;
+      if (!manualAbonoEdited) {
+        document.getElementById('saleAbono').value = total;
+      }
+      updateLivePreview();
+    };
+
+    document.getElementById('saleAbono').addEventListener('input', () => {
+      manualAbonoEdited = true;
+    });
+
+    window.updateLivePreview = () => {
+      const sample = {
+        category: document.getElementById('saleCategory').value,
+        payment: document.getElementById('salePayment').value,
+        total: document.getElementById('saleTotal').value,
+        abono: document.getElementById('saleAbono').value,
+        cristal: document.getElementById('saleCristal').value
+      };
+      const calc = calculateCommission(sample);
+      const label = document.getElementById('liveCalcText');
+      if (!calc.isPaidFull) {
+        const futureRate = sample.category === 'optico' ? (sample.payment === 'efectivo' ? 0.4 : 0.35) : (sample.payment === 'efectivo' ? 0.25 : 0.2);
+        label.innerHTML = `<span class="text-amber-600">$0 (Abono parcial: se liberará ${formatCLP(Math.round(calc.netBase * futureRate))} al completar el pago)</span>`;
+      } else {
+        label.innerHTML = `<span class="text-emerald-700">${formatCLP(calc.commission)}</span> <span class="text-xs text-slate-500">(Base neta ${formatCLP(calc.netBase)} × ${calc.rate * 100}%)</span>`;
+      }
+    };
+
+    window.saveSale = async (e) => {
+      e.preventDefault();
+      const editId = document.getElementById('editSaleId').value;
+      const payload = {
+        date: document.getElementById('saleDate').value,
+        captadorId: document.getElementById('saleCaptador').value,
+        client: document.getElementById('saleClient').value.trim(),
+        category: document.getElementById('saleCategory').value,
+        payment: document.getElementById('salePayment').value,
+        cristalType: document.getElementById('saleCristalType').value,
+        cristal: Number(document.getElementById('saleCristal').value) || 0,
+        total: Number(document.getElementById('saleTotal').value),
+        abono: Number(document.getElementById('saleAbono').value)
+      };
+
+      if (editId) {
+        await updateDoc(doc(db, "ventas", editId), payload);
+      } else {
+        payload.commissionStatus = 'PENDIENTE';
+        await addDoc(collection(db, "ventas"), payload);
+      }
+      resetSaleForm();
+    };
+
+    window.resetSaleForm = () => {
+      document.getElementById('editSaleId').value = '';
+      document.getElementById('saleClient').value = '';
+      document.getElementById('saleCristalType').value = 'N/A';
+      document.getElementById('saleCristal').value = '0';
+      document.getElementById('saleTotal').value = '';
+      document.getElementById('saleAbono').value = '';
+      document.getElementById('formTitle').textContent = 'Registrar Nueva Venta';
+      document.getElementById('cancelEditBtn').classList.add('hidden');
+      manualAbonoEdited = false;
+      updateLivePreview();
+    };
+
+    window.editSale = (id) => {
+      const s = sales.find(item => item.id === id);
+      if (!s) return;
+      document.getElementById('editSaleId').value = s.id;
+      document.getElementById('saleDate').value = s.date;
+      document.getElementById('saleCaptador').value = s.captadorId;
+      document.getElementById('saleClient').value = s.client || '';
+      document.getElementById('saleCategory').value = s.category;
+      document.getElementById('salePayment').value = s.payment;
+      document.getElementById('saleCristalType').value = s.cristalType || 'N/A';
+      document.getElementById('saleCristal').value = s.cristal || 0;
+      document.getElementById('saleTotal').value = s.total;
+      document.getElementById('saleAbono').value = s.abono;
+      document.getElementById('formTitle').textContent = 'Editando Venta / Completar Abono';
+      document.getElementById('cancelEditBtn').classList.remove('hidden');
+      manualAbonoEdited = true;
+      updateLivePreview();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    window.toggleCommissionPaid = async (id, currentStatus) => {
+      const nextStatus = currentStatus === 'PAGADA' ? 'PENDIENTE' : 'PAGADA';
+      await updateDoc(doc(db, "ventas", id), { commissionStatus: nextStatus });
+    };
+
+    window.deleteSale = async (id) => {
+      if (confirm("¿Eliminar este registro de venta?")) {
+        await deleteDoc(doc(db, "ventas", id));
+      }
+    };
+
+    // Renderizar Tabla General Admin
+    window.renderAdminTable = () => {
+      const capFilter = document.getElementById('adminFilterCaptador').value;
+      const monthFilter = document.getElementById('adminFilterMonth').value;
+      const statusFilter = document.getElementById('adminFilterStatus').value;
+
+      let filtered = sales.filter(s => {
+        const calc = calculateCommission(s);
+        if (capFilter !== 'ALL' && s.captadorId !== capFilter) return false;
+        if (monthFilter && !s.date.startsWith(monthFilter)) return false;
+        if (statusFilter === 'ABONO' && calc.isPaidFull) return false;
+        if (statusFilter === 'PENDIENTE' && (!calc.isPaidFull || s.commissionStatus === 'PAGADA')) return false;
+        if (statusFilter === 'PAGADA' && (!calc.isPaidFull || s.commissionStatus !== 'PAGADA')) return false;
+        return true;
+      });
+
+      let opticoTotalSum = 0;
+      let contactoTotalSum = 0;
+      let pendingCommSum = 0;
+      let paidCommSum = 0;
+
+      const tbody = document.getElementById('adminSalesTable');
+      tbody.innerHTML = '';
+
+      filtered.forEach(s => {
+        const cap = captadores.find(c => c.id === s.captadorId);
+        const calc = calculateCommission(s);
+        const totalVenta = Number(s.total) || 0;
+
+        if (s.category === 'optico') {
+          opticoTotalSum += totalVenta;
+        } else {
+          contactoTotalSum += totalVenta;
+        }
+
+        if (calc.isPaidFull) {
+          if (s.commissionStatus === 'PAGADA') {
+            paidCommSum += calc.commission;
+          } else {
+            pendingCommSum += calc.commission;
+          }
+        }
+
+        const catLabel = s.category === 'optico' ? 'Óptico' : 'Contacto';
+        const payLabel = s.payment.charAt(0).toUpperCase() + s.payment.slice(1);
+
+        let payActionBtn = '';
+        if (!calc.isPaidFull) {
+          payActionBtn = `<span class="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">Falta saldo cliente</span>`;
+        } else if (s.commissionStatus === 'PAGADA') {
+          payActionBtn = `<button onclick="toggleCommissionPaid('${s.id}', 'PAGADA')" class="text-xs bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-semibold px-2.5 py-1 rounded-full">Pagada ✓</button>`;
+        } else {
+          payActionBtn = `<button onclick="toggleCommissionPaid('${s.id}', 'PENDIENTE')" class="text-xs bg-amber-100 hover:bg-amber-200 text-amber-800 font-semibold px-2.5 py-1 rounded-full">Pendiente (Marcar Pagada)</button>`;
+        }
+
+        tbody.innerHTML += `
+          <tr class="hover:bg-slate-50">
+            <td class="py-3 px-4 whitespace-nowrap">${s.date}</td>
+            <td class="py-3 px-4 font-semibold text-slate-800">${cap ? cap.name : 'Eliminado'}</td>
+            <td class="py-3 px-4 text-slate-600">${s.client || '-'}</td>
+            <td class="py-3 px-4">${catLabel} · <span class="text-xs text-slate-500">${payLabel}</span></td>
+            <td class="py-3 px-4 text-slate-600">${s.cristalType || 'N/A'}</td>
+            <td class="py-3 px-4 text-slate-500">${s.cristal > 0 ? '-' + formatCLP(s.cristal) : '$0'}</td>
+            <td class="py-3 px-4">
+              <div class="font-medium">${formatCLP(s.total)}</div>
+              ${!calc.isPaidFull ? `<div class="text-xs text-amber-600 font-medium">Abonó: ${formatCLP(s.abono)}</div>` : ''}
+            </td>
+            <td class="py-3 px-4 font-bold ${calc.isPaidFull ? 'text-emerald-700' : 'text-slate-400'}">
+              ${calc.isPaidFull ? formatCLP(calc.commission) : '$0'}
+            </td>
+            <td class="py-3 px-4">${payActionBtn}</td>
+            <td class="py-3 px-4 text-right whitespace-nowrap space-x-2">
+              <button onclick="editSale('${s.id}')" class="text-indigo-600 hover:underline text-xs font-medium">Editar</button>
+              <button onclick="deleteSale('${s.id}')" class="text-red-500 hover:underline text-xs font-medium">Borrar</button>
+            </td>
+          </tr>
+        `;
+      });
+
+      document.getElementById('adminOpticoTotal').textContent = formatCLP(opticoTotalSum);
+      document.getElementById('adminContactoTotal').textContent = formatCLP(contactoTotalSum);
+      document.getElementById('adminPendingCommSum').textContent = formatCLP(pendingCommSum);
+      document.getElementById('adminPaidCommSum').textContent = formatCLP(paidCommSum);
+    };
+  </script>
+</body>
+</html>
+
